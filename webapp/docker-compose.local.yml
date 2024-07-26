@@ -10,15 +10,15 @@ services:
       - ./backend:/usr/src/backend
     networks:
       - webapp-network
-    # depends_on:
-    #   db:
-    #     condition: service_healthy
-    # healthcheck:
-    #   test: ["CMD", "curl", "-I", "http://localhost:18080/api/health_check", "-X", "GET"]
-    #   interval: 5s
-    #   timeout: 10s
-    #   retries: 10
-    #   start_period: 600s
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-I", "http://localhost:18080/api/health_check", "-X", "GET"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 600s
     entrypoint: ["sh", "-c", "cargo watch -x run"]
 
   frontend:
@@ -30,15 +30,15 @@ services:
       - ./frontend:/usr/src/frontend
     networks:
       - webapp-network
-    # depends_on:
-    #   backend:
-    #     condition: service_healthy
-    # healthcheck:
-    #   test: ["CMD", "curl", "-I", "http://localhost:13000/health-check", "-X", "GET"]
-    #   interval: 5s
-    #   timeout: 10s
-    #   retries: 10
-    #   start_period: 300s
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-I", "http://localhost:13000/health-check", "-X", "GET"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 300s
     entrypoint: ["sh", "-c", "yarn install --frozen-lockfile && yarn dev"]
 
   db:
@@ -58,12 +58,12 @@ services:
       - /tmp/log/mysql:/var/log/mysql
     networks:
       - webapp-network
-    # healthcheck:
-    #   test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
-    #   interval: 5s
-    #   timeout: 30s
-    #   retries: 10
-    #   start_period: 300s
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 30s
+      retries: 10
+      start_period: 300s
 
   nginx:
     container_name: nginx
@@ -76,11 +76,11 @@ services:
       - /tmp/log/nginx:/var/log/nginx
     networks:
       - webapp-network
-    # depends_on:
-    #   frontend:
-    #     condition: service_healthy
-    #   backend:
-    #     condition: service_healthy
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
 
 networks:
   webapp-network:
