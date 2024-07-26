@@ -45,7 +45,7 @@ while true; do
             SCORE=$(echo "$RESPONSE" | jq -r '.score')
 
             LOG_FILE_PATH="./benchmarker/logs/$FILE_KEY.json"
-            RAW_DATA_FILE_PATH="./benchmarker/logs/raw-data-$FILE_KEY.json"
+            RAW_DATA_FILE_PATH="./benchmarker/scores/raw-data-$FILE_KEY.json"
 
             echo $LOG > $LOG_FILE_PATH
             echo $RAW_DATA > $RAW_DATA_FILE_PATH
