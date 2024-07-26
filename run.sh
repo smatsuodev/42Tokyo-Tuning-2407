@@ -19,6 +19,7 @@ fi
 
 # 負荷試験 & 採点開始
 if [[ $HOSTNAME != app-* ]]; then
+    curl -X GET http://localhost:9001/api/group/collect
     (cd benchmarker && bash ./run_k6_and_score.sh)
     if [ $? -ne 0 ]; then
         echo -e "採点フローを中断します。"
