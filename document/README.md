@@ -21,7 +21,7 @@
   - [環境](./md/app/02_Environment.md)
 - 環境構築について
   - [【再掲】最初にやること（VM の環境構築）](./md/setup/01_Start.md)
-  - [ローカル環境での開発](./md/setup/01_Local.md)
+  - [ローカル環境での開発](./md/setup/02_Local.md)
 - サービスと競技について
   - [サービス概要](./md/app/01_Service.md)
   - [競技概要](./md/rules/01_Contest.md)
