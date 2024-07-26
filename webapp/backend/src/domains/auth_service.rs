@@ -1,10 +1,7 @@
 use std::fs::File;
 use std::io::Read;
-use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use actix_web::web::Bytes;
-use log::error;
 
 use crate::errors::AppError;
 use crate::models::user::{Dispatcher, Session, User};

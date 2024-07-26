@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
@@ -27,6 +27,9 @@ mod utils;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    // 環境変数に基づくロガーの初期化
+    env_logger::init();
+
     let pool = infrastructure::db::create_pool().await;
     let mut port = 8080;
 
@@ -34,9 +37,24 @@ async fn main() -> std::io::Result<()> {
         port = 18080;
     }
 
-    let auth_service = web::Data::new(AuthService::new(AuthRepositoryImpl::new(pool.clone())));
-    let auth_service_for_middleware =
-        Arc::new(AuthService::new(AuthRepositoryImpl::new(pool.clone())));
+    // 初期化時にDBからセッションを同期
+    let sessions =
+        sqlx::query_as::<_, (String, i32)>("SELECT session_token, user_id FROM sessions")
+            .fetch_all(&pool)
+            .await
+            .unwrap()
+            .into_iter()
+            .collect();
+    let sessions = Arc::new(RwLock::new(sessions));
+
+    let auth_service = web::Data::new(AuthService::new(AuthRepositoryImpl::new(
+        pool.clone(),
+        sessions.clone(),
+    )));
+    let auth_service_for_middleware = Arc::new(AuthService::new(AuthRepositoryImpl::new(
+        pool.clone(),
+        sessions.clone(),
+    )));
     let tow_truck_service = web::Data::new(TowTruckService::new(
         TowTruckRepositoryImpl::new(pool.clone()),
         OrderRepositoryImpl::new(pool.clone()),
@@ -45,7 +63,7 @@ async fn main() -> std::io::Result<()> {
     let order_service = web::Data::new(OrderService::new(
         OrderRepositoryImpl::new(pool.clone()),
         TowTruckRepositoryImpl::new(pool.clone()),
-        AuthRepositoryImpl::new(pool.clone()),
+        AuthRepositoryImpl::new(pool.clone(), sessions.clone()),
         MapRepositoryImpl::new(pool.clone()),
     ));
     let map_service = web::Data::new(MapService::new(MapRepositoryImpl::new(pool.clone())));
