@@ -80,7 +80,7 @@ const finalScore = (
   getNearestTowTruckScore +
   orderDispatchSuccessScore +
   logoutScore
-).toPrecision(10); // 有効数字を10桁に設定
+)
 
 const score = {
   finalScore,

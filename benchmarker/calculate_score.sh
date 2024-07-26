@@ -9,7 +9,7 @@ SCORE_FILE_PATH=$2
 RAW_DATA_FILE_PATH=$3
 
 if [[ $HOSTNAME == stress-* ]]; then
-    TEAM_ID=$3
+    TEAM_ID=$4
 fi
 
 node score.mjs $SCORE_FILE_PATH $RAW_DATA_FILE_PATH
@@ -36,9 +36,9 @@ else
     SCORE=$(cat ${SCORE_FILE_PATH} | jq -r ".finalScore")
 
     # パスをrun.shからの相対パスに変換
-    LOG_FILE_PATH=$(echo $LOG_FILE_PATH | sed 's|./logs/|benchmarker/logs/|')
-    RAW_DATA_FILE_PATH=$(echo $RAW_DATA_FILE_PATH | sed 's|./scores/|benchmarker/scores/|')
-    SCORE_FILE_PATH=$(echo $SCORE_FILE_PATH | sed 's|./scores/|benchmarker/scores/|')
+    LOG_FILE_PATH=$(echo $LOG_FILE_PATH | sed 's|./logs/|./benchmarker/logs/|')
+    RAW_DATA_FILE_PATH=$(echo $RAW_DATA_FILE_PATH | sed 's|./scores/|./benchmarker/scores/|')
+    SCORE_FILE_PATH=$(echo $SCORE_FILE_PATH | sed 's|./scores/|./benchmarker/scores/|')
 
     echo -e "\n\n===================================================\n\n"
     echo -e "負荷試験が完了しました！！！"

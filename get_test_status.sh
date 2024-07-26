@@ -39,23 +39,43 @@ while true; do
             ;;
         "success")
             COMMIT_ID=$(echo "$RESPONSE" | jq -r '.commitId')
+            FILE_KEY=$(echo "$RESPONSE" | jq -r '.fileKey')
+            LOG=$(echo "$RESPONSE" | jq -r '.log')
+            RAW_DATA=$(echo "$RESPONSE" | jq -r '.rawData')
             SCORE=$(echo "$RESPONSE" | jq -r '.score')
+
+            LOG_FILE_PATH="./benchmarker/logs/$FILE_KEY.json"
+            RAW_DATA_FILE_PATH="./benchmarker/logs/raw-data-$FILE_KEY.json"
+
+            echo $LOG > $LOG_FILE_PATH
+            echo $RAW_DATA > $RAW_DATA_FILE_PATH
 
             echo -e "\n\n===================================================\n\n"
             echo -e "負荷試験が完了しました！！！"
             echo -e "あなたのスコア: $SCORE"
             echo -e "コミットID: $COMMIT_ID"
+            echo -e "より詳細な情報は下記ファイルをご覧ください"
+            echo -e "ログファイル: $LOG_FILE_PATH"
+            echo -e "負荷試験詳細ファイル: $RAW_DATA_FILE_PATH"
             echo -e "\n\n===================================================\n\n"
             break
             ;;
         "failed")
             MESSAGE=$(echo "$RESPONSE" | jq -r '.message')
             FILE_KEY=$(echo "$RESPONSE" | jq -r '.fileKey')
+            LOG=$(echo "$RESPONSE" | jq -r '.log')
+            RAW_DATA=$(echo "$RESPONSE" | jq -r '.rawData')
+
+            echo $LOG > ./benchmarker/logs/$FILE_KEY.json
+            echo $RAW_DATA > ./benchmarker/scores/raw-data-$FILE_KEY.json
 
             echo -e "\n\n===================================================\n\n"
             echo -e "負荷試験が失敗しました。メンターに報告してください。"
             echo -e "ファイルキー：$FILE_KEY"
             echo -e $MESSAGE
+            echo -e "より詳細な情報は下記ファイルをご覧ください"
+            echo -e "ログファイル: $LOG_FILE_PATH"
+            echo -e "負荷試験詳細ファイル: $RAW_DATA_FILE_PATH"
             echo -e "\n\n===================================================\n\n"
             break
             ;;

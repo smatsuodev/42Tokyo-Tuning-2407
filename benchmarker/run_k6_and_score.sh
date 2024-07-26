@@ -24,9 +24,6 @@ LOG_FILE_PATH="./logs/${FILE_NAME}.json"
 RAW_DATA_FILE_PATH="./scores/raw-data-${FILE_NAME}.json"
 SCORE_FILE_PATH="./scores/score-${FILE_NAME}.json"
 
-mkdir -p logs
-mkdir -p scores
-
 # 負荷試験開始
 echo "負荷試験を開始します。"
 
