@@ -60,9 +60,9 @@ services:
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
       interval: 5s
-      timeout: 10s
+      timeout: 30s
       retries: 10
-      start_period: 120s
+      start_period: 300s
 
   nginx:
     container_name: nginx
