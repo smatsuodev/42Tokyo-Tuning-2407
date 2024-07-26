@@ -1,0 +1,430 @@
+openapi: 3.0.0
+info:
+  title: レッカー車アプリケーション API
+  version: 1.0.0
+  description: レッカー車アプリケーションの API エンドポイント
+paths:
+  /register:
+    post:
+      summary: ユーザー登録
+      description: 新しいユーザーを登録する
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: ユーザーが正常に作成された
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+  /login:
+    post:
+      summary: ログイン
+      description: ユーザーのログインを行う
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: ログインが成功した
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+  /logout:
+    post:
+      summary: ログアウト
+      description: ユーザーのログアウトを行う
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '200':
+          description: ログアウトが成功した
+  /tow_truck/list:
+    get:
+      summary: レッカー車の一覧取得
+      description: レッカー車の一覧を取得する
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: ページ番号（デフォルトは0）
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: 1ページあたりの項目数（デフォルトは全件）
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+          description: フィルタリングするステータス
+        - name: area
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: フィルタリングするエリア ID
+      responses:
+        '200':
+          description: レッカー車の一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TowTruck'
+  /tow_truck/location:
+    post:
+      summary: レッカー車の位置情報更新
+      description: レッカー車の位置情報を更新する
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLocationRequest'
+      responses:
+        '200':
+          description: 位置情報の更新が成功した
+  /tow_truck/nearest:
+    get:
+      summary: 最寄りの利用可能なレッカー車の取得
+      description: 特定の依頼に対して最寄りの利用可能なレッカー車を取得する
+      parameters:
+        - name: order_id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 最寄りのレッカー車
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TowTruck'
+  /order/status:
+    post:
+      summary: 依頼のステータス更新
+      description: 依頼のステータスを更新する
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStatusRequest'
+      responses:
+        '200':
+          description: ステータスの更新が成功した
+  /order/list:
+    get:
+      summary: 依頼の一覧取得
+      description: 依頼の一覧を取得する
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: ページ番号（デフォルトは0）
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: 1ページあたりの項目数（デフォルトは10）
+        - name: sort_by
+          in: query
+          required: false
+          schema:
+            type: string
+          description: ソート対象のフィールド
+        - name: sort_order
+          in: query
+          required: false
+          schema:
+            type: string
+          description: ソート順（ascまたはdesc、デフォルトはdesc）
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+          description: フィルタリングするステータス
+        - name: area
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: フィルタリングするエリア ID
+      responses:
+        '200':
+          description: 依頼の一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+  /order/client:
+    post:
+      summary: クライアントからのレッカー車依頼
+      description: クライアントからのレッカー車依頼を作成する
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientOrderRequest'
+      responses:
+        '201':
+          description: 依頼が成功した
+  /order/dispatcher:
+    post:
+      summary: ディスパッチャーからのレッカー車依頼
+      description: ディスパッチャーからのレッカー車依頼を作成する
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DispatcherOrderRequest'
+      responses:
+        '201':
+          description: 依頼が成功した
+  /order/{id}:
+    get:
+      summary: 依頼の詳細取得
+      description: 指定したIDの依頼の詳細を取得する
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 依頼の詳細
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+components:
+  schemas:
+    RegisterRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          description: ユーザー名
+        password:
+          type: string
+          description: パスワード
+        role:
+          type: string
+          enum: [client, dispatcher, driver]
+          description: ユーザーの役割
+        area_id:
+          type: integer
+          description: ユーザーのエリア ID
+      required:
+        - username
+        - password
+        - role
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          description: ユーザー名
+        password:
+          type: string
+          description: パスワード
+      required:
+        - username
+        - password
+    LoginResponse:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          description: システムの発行するユーザID
+        username:
+          type: string
+          description: ユーザ名
+        session_token:
+          type: string
+          description: セッショントークン
+        role:
+          type: string
+          enum: [client, dispatcher, driver]
+          description: ユーザーの役割
+        dispatcher_id:
+          type: integer
+          description: ディスパッチャーのID
+        area_id:
+          type: integer
+          description: エリア ID
+    LogoutRequest:
+      type: object
+      properties:
+        session_token:
+          type: string
+          description: セッショントークン
+      required:
+        - session_token
+    TowTruck:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: レッカー車の ID
+        driver_user_id:
+          type: integer
+          description: ドライバーのユーザ ID
+        driver_username:
+          type: string
+          description: ドライバーの名前
+        status:
+          type: string
+          description: レッカー車のステータス
+        node_id:
+          type: integer
+          description: ノード（位置）の ID
+        area_id:
+          type: integer
+          description: エリア ID
+    UpdateLocationRequest:
+      type: object
+      properties:
+        tow_truck_id:
+          type: integer
+          description: レッカー車の ID
+        node_id:
+          type: integer
+          description: ノード ID
+      required:
+        - tow_truck_id
+        - node_id
+    UpdateStatusRequest:
+      type: object
+      properties:
+        order_id:
+          type: integer
+          description: 依頼の ID
+        status:
+          type: string
+          description: 更新するステータス
+      required:
+        - order_id
+        - status
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 依頼の ID
+        client_id:
+          type: integer
+          description: 顧客の ID
+        client_username:
+          type: string
+          description: 顧客の名前
+        dispatcher_id:
+          type: integer
+          description: ディスパッチャーの ID
+        dispatcher_username:
+          type: string
+          description: ディスパッチャーの名前
+        tow_truck_id:
+          type: integer
+          description: レッカー車の ID
+        driver_id:
+          type: integer
+          description: ドライバーの ID
+        driver_username:
+          type: string
+          description: ドライバーの名前
+        status:
+          type: string
+          description: 注文のステータス
+        node_id:
+          type: integer
+          description: ノード ID (位置)
+        area_id:
+          type: integer
+          description: エリア ID
+        car_value:
+          type: number
+          format: double
+          description: 車の価値
+        order_time:
+          type: string
+          format: date-time
+          description: 依頼時間
+        completed_time:
+          type: string
+          format: date-time
+          description: 完了時間
+      required:
+        - id
+        - client_id
+        - client_username
+        - status
+        - node_id
+        - car_value
+        - order_time
+    ClientOrderRequest:
+      type: object
+      properties:
+        client_id:
+          type: integer
+          description: 顧客の ID
+        node_id:
+          type: integer
+          description: ノード ID
+        car_value:
+          type: number
+          format: double
+          description: 車の価値
+      required:
+        - client_id
+        - node_id
+        - car_value
+    DispatcherOrderRequest:
+      type: object
+      properties:
+        dispatcher_id:
+          type: integer
+          description: ディスパッチャーの ID
+        order_id:
+          type: integer
+          description: 依頼の ID
+        tow_truck_id:
+          type: integer
+          description: レッカー車の ID
+        order_time:
+          type: string
+          format: date-time
+          description: 依頼時間
+      required:
+        - dispatcher_id
+        - order_id
+        - tow_truck_id
+        - order_time

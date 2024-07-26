@@ -1,0 +1,14 @@
+.row {
+    cursor: pointer;
+
+    .user {
+        gap: 8px;
+        display: flex;
+        align-items: center;
+
+        .icon {
+            border-radius: 50%;
+            overflow: hidden;
+        }
+    }
+}

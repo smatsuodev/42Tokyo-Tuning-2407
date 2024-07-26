@@ -1,0 +1,90 @@
+services:
+  backend:
+    container_name: backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    environment:
+      DATABASE_URL: mysql://user:password@db/42Tokyo-db
+    ports:
+      - "8080:8080"
+    networks:
+      - webapp-network
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-I", "http://localhost:8080/api/health_check", "-X", "GET"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 600s
+    entrypoint: ["sh", "-c", "./backend"]
+
+  frontend:
+    container_name: frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    environment:
+      - API_BASE_URL=https://${HOSTNAME}.ftt2407.dabaas.net
+    ports:
+      - "3000:3000"
+    networks:
+      - webapp-network
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-I", "http://localhost:3000/health-check", "-X", "GET"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    entrypoint: ["sh", "-c", "yarn start"]
+
+  db:
+    container_name: mysql
+    image: 42tokyo2407.azurecr.io/mysql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: mysql
+      MYSQL_DATABASE: 42Tokyo-db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./mysql/data:/var/lib/mysql
+      - ./mysql/init:/docker-entrypoint-initdb.d
+      - ./mysql/conf.d:/etc/mysql/conf.d
+      - ./mysql/migration:/etc/mysql/migration
+    networks:
+      - webapp-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  nginx:
+    container_name: nginx
+    image: 42tokyo2407.azurecr.io/nginx:latest
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - /da/tls:/da/tls:ro
+    networks:
+      - webapp-network
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+
+networks:
+  webapp-network:
+    external: true

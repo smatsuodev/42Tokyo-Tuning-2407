@@ -1,0 +1,5 @@
+node_modules
+raw-data.json
+score.json
+restore_and_migration.sh
+.gitignore

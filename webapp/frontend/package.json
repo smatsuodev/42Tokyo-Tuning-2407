@@ -1,0 +1,40 @@
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 13000",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint 'src/**/*.{ts,tsx}'",
+    "type-check": "tsc --pretty --noEmit",
+    "test": "jest --silent",
+    "format": "prettier --write 'src/**/*.{ts,tsx}'",
+    "format-all": "yarn format && yarn lint --fix"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.11.4",
+    "@emotion/styled": "^11.11.5",
+    "@mui/material": "^5.15.20",
+    "axios": "^1.7.2",
+    "dayjs": "^1.11.11",
+    "next": "14.2.4",
+    "query-string": "^9.0.0",
+    "react": "^18",
+    "react-dom": "^18"
+  },
+  "devDependencies": {
+    "@next/eslint-plugin-next": "^14.2.4",
+    "@types/node": "20.14.9",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@typescript-eslint/eslint-plugin": "^7.13.0",
+    "@typescript-eslint/parser": "^7.13.0",
+    "eslint": "^9.5.0",
+    "eslint-config-next": "14.2.4",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "prettier": "^3.3.2",
+    "sass": "^1.77.5",
+    "typescript": "5.5.3"
+  }
+}
