@@ -55,7 +55,7 @@ services:
       - ./mysql/init:/docker-entrypoint-initdb.d
       - ./mysql/conf.d:/etc/mysql/conf.d
       - ./mysql/migration:/etc/mysql/migration
-      - /var/log/mysql:/var/log/mysql
+      - /tmp/log/mysql:/var/log/mysql
     networks:
       - webapp-network
     healthcheck:
@@ -72,7 +72,7 @@ services:
       - "80:80"
     volumes:
       - ./nginx/nginx.local.conf:/etc/nginx/nginx.conf
-      - /var/log/nginx:/var/log/nginx
+      - /tmp/log/nginx:/var/log/nginx
     networks:
       - webapp-network
     depends_on:
