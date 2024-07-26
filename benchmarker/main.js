@@ -11,7 +11,7 @@ export const options = {
         ? "60s"
         : "30s",
       exec: "dispatchTowTruck",
-      gracefulStop: "20s",
+      gracefulStop: "30s",
       env: {
         AREA: "2",
       },
@@ -31,7 +31,7 @@ export const options = {
       maxDuration: __ENV.CLIENT_ORIGIN_URL.includes("https://app-")
         ? "60s"
         : "30s",
-      gracefulStop: "20s",
+      gracefulStop: "30s",
       exec: "dispatchTowTruck",
       env: {
         AREA: "3",
@@ -53,7 +53,7 @@ export const options = {
         ? "60s"
         : "30s",
       exec: "dispatchTowTruck",
-      gracefulStop: "20s",
+      gracefulStop: "30s",
       env: {
         AREA: "4",
       },
@@ -74,7 +74,7 @@ export const options = {
         ? "60s"
         : "30s",
       exec: "dispatchTowTruck",
-      gracefulStop: "20s",
+      gracefulStop: "30s",
       env: {
         AREA: "5",
       },
@@ -94,7 +94,7 @@ export const options = {
       maxDuration: __ENV.CLIENT_ORIGIN_URL.includes("https://app-")
         ? "60s"
         : "30s",
-      gracefulStop: "20s",
+      gracefulStop: "30s",
       exec: "dispatchTowTruck",
       env: {
         AREA: "6",
@@ -116,7 +116,7 @@ export const options = {
         ? "60s"
         : "30s",
       exec: "dispatchTowTruck",
-      gracefulStop: "20s",
+      gracefulStop: "30s",
       env: {
         AREA: "7",
       },
