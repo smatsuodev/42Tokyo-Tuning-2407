@@ -72,6 +72,7 @@ services:
       - "80:80"
     volumes:
       - ./nginx/nginx.local.conf:/etc/nginx/nginx.conf
+      - ./nginx/common:/etc/nginx/common
       - /tmp/log/nginx:/var/log/nginx
     networks:
       - webapp-network
