@@ -32,16 +32,6 @@ struct UserWithExtra {
     area_id: Option<i32>,
 }
 
-#[derive(FromRow, Clone, Debug)]
-struct UserWithExtra {
-    id: i32,
-    username: String,
-    password: String,
-    role: String,
-    dispatcher_id: Option<i32>,
-    area_id: Option<i32>,
-}
-
 impl AuthRepository for AuthRepositoryImpl {
     async fn find_user_by_id(&self, id: i32) -> Result<Option<User>, AppError> {
         let user = sqlx::query_as::<_, User>("SELECT * FROM users WHERE id = ?")
