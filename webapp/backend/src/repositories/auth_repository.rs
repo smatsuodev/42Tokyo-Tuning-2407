@@ -159,10 +159,6 @@ impl AuthRepository for AuthRepositoryImpl {
         username: &str,
         password: &str,
     ) -> Result<Option<LoginResponseDto>, AppError> {
-        warn!(
-            "{}: login: select query started",
-            Utc::now().format("%H:%M:%S:%3f")
-        );
         let user = sqlx::query_as::<_, UserWithExtra>(
             r#"
             SELECT
@@ -185,24 +181,12 @@ impl AuthRepository for AuthRepositoryImpl {
         .bind(&username)
         .fetch_optional(&self.pool)
         .await?;
-        warn!(
-            "{}: login: select query finished",
-            Utc::now().format("%H:%M:%S:%3f")
-        );
 
         if let Some(user) = user {
-            warn!(
-                "{}: login: verify password started",
-                Utc::now().format("%H:%M:%S:%3f")
-            );
             let is_password_valid = verify_password(&user.password, password).unwrap();
             if !is_password_valid {
                 return Err(AppError::Unauthorized);
             }
-            warn!(
-                "{}: login: verify password finished",
-                Utc::now().format("%H:%M:%S:%3f")
-            );
 
             if user.role == "dispatcher" {
                 Ok(Some(LoginResponseDto {

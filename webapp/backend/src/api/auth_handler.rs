@@ -23,8 +23,6 @@ pub async fn login_handler(
     service: web::Data<AuthService<AuthRepositoryImpl>>,
     req: web::Json<LoginRequestDto>,
 ) -> Result<HttpResponse, AppError> {
-    warn!("{} login_handler called", Utc::now().format("%H:%M:%S:%3f"));
-
     let res = match service.login_user(&req.username, &req.password).await {
         Ok(response) => Ok(HttpResponse::Ok().json(response)),
         Err(err) => {
@@ -35,10 +33,6 @@ pub async fn login_handler(
             Err(err)
         }
     };
-    warn!(
-        "{} login_handler finished",
-        Utc::now().format("%H:%M:%S:%3f")
-    );
     res
 }
 
