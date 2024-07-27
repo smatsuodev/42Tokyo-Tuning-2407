@@ -12,7 +12,3 @@ ADD INDEX status_order_time_idx (`status`, order_time);
 
 ALTER TABLE tow_trucks
 ADD INDEX areas_status_idx (area_id, `status`);
-
-ALTER TABLE tow_trucks ADD INDEX areas_idx (area_id);
-
-ALTER TABLE tow_trucks ADD INDEX status_idx (`status`);
