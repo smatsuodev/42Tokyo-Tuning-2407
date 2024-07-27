@@ -1,4 +1,4 @@
-use super::dto::tow_truck::TowTruckDto;
+use super::dto::tow_truck::{self, TowTruckDto};
 use super::map_service::MapRepository;
 use super::order_service::OrderRepository;
 use crate::errors::AppError;
@@ -100,30 +100,27 @@ impl<
             graph.add_edge(edge);
         }
 
-        let sorted_tow_trucks_by_distance = {
-            let mut tow_trucks_with_distance: Vec<_> = tow_trucks
-                .into_iter()
-                .map(|truck| {
-                    let distance = calculate_distance(&graph, truck.node_id, order.node_id);
-                    (distance, truck)
-                })
-                .collect();
+        let mut min_distance = i32::MAX;
+        let mut truck: Option<TowTruck> = None;
+        for t in tow_trucks {
+            let distance = calculate_distance(&graph, t.node_id, order.node_id);
+            if distance < min_distance {
+                min_distance = distance;
+                truck = Some(t);
+            }
+        }
 
-            tow_trucks_with_distance.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-            tow_trucks_with_distance
-        };
-
-        if sorted_tow_trucks_by_distance.is_empty() || sorted_tow_trucks_by_distance[0].0 > 10000000
-        {
+        if min_distance > 10000000 {
             return Ok(None);
         }
 
-        let sorted_tow_truck_dtos: Vec<TowTruckDto> = sorted_tow_trucks_by_distance
-            .into_iter()
-            .map(|(_, truck)| TowTruckDto::from_entity(truck))
-            .collect();
+        let res = if let Some(truck) = truck {
+            Some(TowTruckDto::from_entity(truck.clone()))
+        } else {
+            None
+        };
 
-        Ok(sorted_tow_truck_dtos.first().cloned())
+        Ok(res)
     }
 }
 
