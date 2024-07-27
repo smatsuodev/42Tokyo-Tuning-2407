@@ -49,3 +49,5 @@ echo -e "負荷試験サーバーIPアドレス: $IP_ADDRESS"
 echo -e "上記のジョブIDをもとに負荷試験のステータスを確認できます"
 echo -e "bash get_test_status.sh $JOB_ID $IP_ADDRESS"
 echo -e "\n\n===================================================\n\n"
+
+bash get_test_status.sh $JOB_ID $IP_ADDRESS
