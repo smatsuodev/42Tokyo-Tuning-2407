@@ -1,6 +1,6 @@
 services:
-  backend:
-    container_name: backend
+  backend-1:
+    container_name: backend-1
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -21,8 +21,29 @@ services:
       retries: 10
       start_period: 600s
     entrypoint: ["sh", "-c", "./backend"]
-    deploy:
-      replicas: 4
+
+  backend-2:
+    container_name: backend-2
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    environment:
+      DATABASE_URL: mysql://user:password@db/42Tokyo-db
+    ports:
+      - "8081:8080"
+    networks:
+      - webapp-network
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-I", "http://localhost:8080/api/health_check", "-X", "GET"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 600s
+    entrypoint: ["sh", "-c", "./backend"]
 
   frontend:
     container_name: frontend
