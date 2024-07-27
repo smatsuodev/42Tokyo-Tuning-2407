@@ -19,6 +19,7 @@ pub struct Edge {
 
 #[derive(Debug)]
 pub struct Graph {
+    pub max_node_id: usize,
     pub nodes: HashMap<i32, Node>,
     pub edges: HashMap<i32, Vec<Edge>>,
 }
@@ -26,12 +27,14 @@ pub struct Graph {
 impl Graph {
     pub fn new() -> Self {
         Graph {
+            max_node_id: 0,
             nodes: HashMap::new(),
             edges: HashMap::new(),
         }
     }
 
     pub fn add_node(&mut self, node: Node) {
+        self.max_node_id = self.max_node_id.max(node.id as usize);
         self.nodes.insert(node.id, node);
     }
 
@@ -53,10 +56,11 @@ impl Graph {
     }
 
     pub fn shortest_path(&self, from_node_id: i32, to_node_id: i32) -> i32 {
-        let mut distances = HashMap::new();
+        let mut distances = Vec::new();
         let mut heap = BinaryHeap::new();
+        distances.resize(self.max_node_id + 1, i32::MAX);
 
-        distances.insert(from_node_id, 0);
+        distances[from_node_id as usize] = 0;
         heap.push(Reverse((0, from_node_id)));
 
         while let Some(Reverse((cost, node_id))) = heap.pop() {
@@ -64,7 +68,7 @@ impl Graph {
                 return cost;
             }
 
-            if cost > *distances.get(&node_id).unwrap_or(&i32::MAX) {
+            if cost > distances[node_id as usize] {
                 continue;
             }
 
@@ -73,8 +77,8 @@ impl Graph {
                     let next = edge.node_b_id;
                     let next_cost = cost + edge.weight;
 
-                    if next_cost < *distances.get(&next).unwrap_or(&i32::MAX) {
-                        distances.insert(next, next_cost);
+                    if next_cost < distances[next as usize] {
+                        distances[next as usize] = next_cost;
                         heap.push(Reverse((next_cost, next)));
                     }
                 }
