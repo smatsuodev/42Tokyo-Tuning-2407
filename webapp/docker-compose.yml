@@ -45,8 +45,8 @@ services:
       start_period: 600s
     entrypoint: ["sh", "-c", "./backend"]
 
-  frontend:
-    container_name: frontend
+  frontend-1:
+    container_name: frontend-1
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -55,6 +55,31 @@ services:
       - API_BASE_URL=https://${HOSTNAME}.ftt2407.dabaas.net
     ports:
       - "3000:3000"
+    networks:
+      - webapp-network
+    depends_on:
+      backend-1:
+        condition: service_healthy
+      backend-2:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-I", "http://localhost:3000/health-check", "-X", "GET"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    entrypoint: ["sh", "-c", "yarn start"]
+
+  frontend-2:
+    container_name: frontend-2
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    environment:
+      - API_BASE_URL=https://${HOSTNAME}.ftt2407.dabaas.net
+    ports:
+      - "3001:3000"
     networks:
       - webapp-network
     depends_on:
@@ -108,7 +133,9 @@ services:
     networks:
       - webapp-network
     depends_on:
-      frontend:
+      frontend-1:
+        condition: service_healthy
+      frontend-2:
         condition: service_healthy
       backend-1:
         condition: service_healthy
