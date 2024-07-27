@@ -5,8 +5,6 @@ ALTER TABLE `dispatchers` ADD INDEX user_id_idx (`user_id`);
 
 ALTER TABLE `nodes` ADD INDEX area_id_idx (`area_id`);
 
-ALTER TABLE orders ADD INDEX status_idx (`status`);
-
 ALTER TABLE orders
 ADD INDEX status_order_time_idx (`status`, order_time);
 
