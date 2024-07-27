@@ -21,6 +21,8 @@ services:
       retries: 10
       start_period: 600s
     entrypoint: ["sh", "-c", "./backend"]
+    deploy:
+      replicas: 4
 
   frontend:
     container_name: frontend
