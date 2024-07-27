@@ -2,6 +2,7 @@
 
 JOB_ID=$1
 IP_ADDRESS=$2
+IS_COLLECT=0
 
 if [ -z "$JOB_ID" ] || [ -z "$IP_ADDRESS" ]; then
   echo -e "Usage: $0 <job_id> <ip_address>"
@@ -34,6 +35,10 @@ while true; do
             if [ "$PROGRESS" -eq 100 ]; then
                 printf "\r\033[Kスコアを計算中です%-5s" "$DOTS"
             else
+                if [ "$IS_COLLECT" -eq 0 ]; then
+                    IS_COLLECT=1
+                    curl -X GET http://localhost:9000/api/group/collect
+                fi
                 printf "\r\033[K負荷試験実行中です%-15s 負荷試験進捗度：[ %3d ]%%" "$DOTS" "$PROGRESS"
             fi
             ;;
