@@ -1,3 +1,9 @@
+use core::panic;
+use std::{
+    collections::HashMap,
+    sync::{Arc, RwLock},
+};
+
 use sqlx::MySqlPool;
 
 use crate::{
@@ -8,76 +14,47 @@ use crate::{
 #[derive(Debug)]
 pub struct MapRepositoryImpl {
     pool: MySqlPool,
+    edges_cache: Arc<RwLock<HashMap<(i32, i32), Edge>>>,
+    edges_by_area_cache: Arc<RwLock<Vec<HashMap<(i32, i32), Edge>>>>,
+    nodes_cache: Vec<Node>,
+    nodes_by_area_cache: Vec<Vec<Node>>,
 }
 
 impl MapRepositoryImpl {
-    pub fn new(pool: MySqlPool) -> Self {
-        MapRepositoryImpl { pool }
+    pub fn new(
+        pool: MySqlPool,
+        edges_cache: Arc<RwLock<HashMap<(i32, i32), Edge>>>,
+        edges_by_area_cache: Arc<RwLock<Vec<HashMap<(i32, i32), Edge>>>>,
+        nodes_cache: Vec<Node>,
+        nodes_by_area_cache: Vec<Vec<Node>>,
+    ) -> Self {
+        MapRepositoryImpl {
+            pool,
+            edges_cache,
+            edges_by_area_cache,
+            nodes_cache,
+            nodes_by_area_cache,
+        }
     }
 }
 
 impl MapRepository for MapRepositoryImpl {
     async fn get_all_nodes(&self, area_id: Option<i32>) -> Result<Vec<Node>, sqlx::Error> {
-        let where_clause = match area_id {
-            Some(_) => "WHERE area_id = ?",
-            None => "",
-        };
-
-        let sql = format!(
-            "SELECT
-                * 
-            FROM
-                nodes
-            {}",
-            where_clause
-        );
-
         let nodes = match area_id {
-            Some(area_id) => {
-                sqlx::query_as::<_, Node>(&sql)
-                    .bind(area_id)
-                    .fetch_all(&self.pool)
-                    .await?
-            }
-            None => {
-                sqlx::query_as::<_, Node>(&sql)
-                    .fetch_all(&self.pool)
-                    .await?
-            }
+            Some(area_id) => self.nodes_by_area_cache[area_id as usize - 1].clone(),
+            None => self.nodes_cache.clone(),
         };
 
         Ok(nodes)
     }
 
     async fn get_all_edges(&self, area_id: Option<i32>) -> Result<Vec<Edge>, sqlx::Error> {
-        let where_clause = match area_id {
-            Some(_) => "JOIN nodes n ON e.node_a_id = n.id WHERE n.area_id = ?",
-            None => "",
-        };
-
-        let sql = format!(
-            "SELECT
-                e.node_a_id,
-                e.node_b_id,
-                e.weight
-            FROM
-                edges e
-            {}",
-            where_clause
-        );
-
         let edges = match area_id {
-            Some(area_id) => {
-                sqlx::query_as::<_, Edge>(&sql)
-                    .bind(area_id)
-                    .fetch_all(&self.pool)
-                    .await?
-            }
-            None => {
-                sqlx::query_as::<_, Edge>(&sql)
-                    .fetch_all(&self.pool)
-                    .await?
-            }
+            Some(area_id) => self.edges_by_area_cache.read().unwrap()[area_id as usize - 1]
+                .values()
+                .cloned()
+                .collect(),
+            None => self.edges_cache.read().unwrap().values().cloned().collect(),
         };
 
         Ok(edges)
@@ -106,6 +83,29 @@ impl MapRepository for MapRepositoryImpl {
             .bind(node_a_id)
             .execute(&self.pool)
             .await?;
+        self.edges_cache.write().unwrap().insert(
+            (node_a_id, node_b_id),
+            Edge {
+                node_a_id,
+                node_b_id,
+                weight,
+            },
+        );
+
+        self.edges_by_area_cache
+            .write()
+            .unwrap()
+            .iter_mut()
+            .for_each(|edges| {
+                edges.insert(
+                    (node_a_id, node_b_id),
+                    Edge {
+                        node_a_id,
+                        node_b_id,
+                        weight,
+                    },
+                );
+            });
 
         Ok(())
     }

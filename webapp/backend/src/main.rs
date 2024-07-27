@@ -11,12 +11,11 @@ use domains::{
     auth_service::AuthService, order_service::OrderService, tow_truck_service::TowTruckService,
 };
 use middlewares::auth_middleware::AuthMiddleware;
+use models::graph::{Edge, Node};
 use repositories::auth_repository::AuthRepositoryImpl;
 use repositories::map_repository::MapRepositoryImpl;
 use repositories::order_repository::OrderRepositoryImpl;
 use repositories::tow_truck_repository::TowTruckRepositoryImpl;
-use sqlx::mysql::MySqlPoolOptions;
-use sqlx::pool::PoolOptions;
 
 mod api;
 mod domains;
@@ -37,6 +36,83 @@ async fn main() -> std::io::Result<()> {
         port = 18080;
     }
 
+    let edges_cache = sqlx::query_as::<_, Edge>(
+        "SELECT
+            e.node_a_id,
+            e.node_b_id,
+            e.weight
+        FROM
+            edges e",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap()
+    .into_iter()
+    .map(|edge| ((edge.node_a_id, edge.node_b_id), edge))
+    .collect();
+
+    let num_of_areas: i32 = sqlx::query_scalar("SELECT COUNT(*) FROM areas")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    let mut edges_by_area_cache = Vec::new();
+    for area in 1..=num_of_areas {
+        let edges = sqlx::query_as::<_, Edge>(
+            "SELECT
+                e.node_a_id,
+                e.node_b_id,
+                e.weight
+            FROM
+                edges e
+            JOIN
+                nodes n
+            ON
+                e.node_a_id = n.id
+                AND n.area_id = ?
+            ",
+        )
+        .bind(area)
+        .fetch_all(&pool)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|edge| ((edge.node_a_id, edge.node_b_id), edge))
+        .collect();
+        edges_by_area_cache.push(edges);
+    }
+
+    let nodes_cache: Vec<Node> = sqlx::query_as::<_, Node>(
+        "SELECT
+        *
+        FROM
+            nodes n",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap()
+    .into_iter()
+    .collect();
+
+    let mut nodes_by_area_cache = Vec::new();
+    for area in 1..=num_of_areas {
+        let nodes = sqlx::query_as::<_, Node>(
+            "SELECT
+                *
+            FROM
+                nodes n
+            WHERE
+                n.area_id = ?
+            ",
+        )
+        .bind(area)
+        .fetch_all(&pool)
+        .await
+        .unwrap()
+        .into_iter()
+        .collect();
+        nodes_by_area_cache.push(nodes);
+    }
+
     // 初期化時にDBからセッションを同期
     let sessions =
         sqlx::query_as::<_, (String, i32)>("SELECT session_token, user_id FROM sessions")
@@ -45,7 +121,10 @@ async fn main() -> std::io::Result<()> {
             .unwrap()
             .into_iter()
             .collect();
+
     let sessions = Arc::new(RwLock::new(sessions));
+    let edges_cache = Arc::new(RwLock::new(edges_cache));
+    let edges_by_area_cache = Arc::new(RwLock::new(edges_by_area_cache));
 
     let auth_service = web::Data::new(AuthService::new(AuthRepositoryImpl::new(
         pool.clone(),
@@ -58,15 +137,33 @@ async fn main() -> std::io::Result<()> {
     let tow_truck_service = web::Data::new(TowTruckService::new(
         TowTruckRepositoryImpl::new(pool.clone()),
         OrderRepositoryImpl::new(pool.clone()),
-        MapRepositoryImpl::new(pool.clone()),
+        MapRepositoryImpl::new(
+            pool.clone(),
+            edges_cache.clone(),
+            edges_by_area_cache.clone(),
+            nodes_cache.clone(),
+            nodes_by_area_cache.clone(),
+        ),
     ));
     let order_service = web::Data::new(OrderService::new(
         OrderRepositoryImpl::new(pool.clone()),
         TowTruckRepositoryImpl::new(pool.clone()),
         AuthRepositoryImpl::new(pool.clone(), sessions.clone()),
-        MapRepositoryImpl::new(pool.clone()),
+        MapRepositoryImpl::new(
+            pool.clone(),
+            edges_cache.clone(),
+            edges_by_area_cache.clone(),
+            nodes_cache.clone(),
+            nodes_by_area_cache.clone(),
+        ),
     ));
-    let map_service = web::Data::new(MapService::new(MapRepositoryImpl::new(pool.clone())));
+    let map_service = web::Data::new(MapService::new(MapRepositoryImpl::new(
+        pool.clone(),
+        edges_cache.clone(),
+        edges_by_area_cache.clone(),
+        nodes_cache.clone(),
+        nodes_by_area_cache.clone(),
+    )));
 
     HttpServer::new(move || {
         let mut cors = Cors::default();
@@ -170,7 +267,6 @@ async fn main() -> std::io::Result<()> {
             )
     })
     .bind(format!("0.0.0.0:{port}"))?
-    .workers(500)
     .run()
     .await
 }
