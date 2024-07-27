@@ -15,6 +15,8 @@ use repositories::auth_repository::AuthRepositoryImpl;
 use repositories::map_repository::MapRepositoryImpl;
 use repositories::order_repository::OrderRepositoryImpl;
 use repositories::tow_truck_repository::TowTruckRepositoryImpl;
+use sqlx::mysql::MySqlPoolOptions;
+use sqlx::pool::PoolOptions;
 
 mod api;
 mod domains;
@@ -27,6 +29,7 @@ mod utils;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    env_logger::init();
     let pool = infrastructure::db::create_pool().await;
     let mut port = 8080;
 
@@ -152,7 +155,7 @@ async fn main() -> std::io::Result<()> {
             )
     })
     .bind(format!("0.0.0.0:{port}"))?
-    .workers(4)
+    .workers(500)
     .run()
     .await
 }

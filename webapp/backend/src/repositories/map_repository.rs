@@ -28,9 +28,7 @@ impl MapRepository for MapRepositoryImpl {
                 * 
             FROM
                 nodes
-            {}
-            ORDER BY
-                id",
+            {}",
             where_clause
         );
 
