@@ -108,7 +108,9 @@ services:
     depends_on:
       frontend:
         condition: service_healthy
-      backend:
+      backend-1:
+        condition: service_healthy
+      backend-2:
         condition: service_healthy
 
 networks:
