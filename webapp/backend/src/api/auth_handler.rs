@@ -3,6 +3,8 @@ use crate::domains::dto::auth::{LoginRequestDto, LogoutRequestDto, RegisterReque
 use crate::errors::AppError;
 use crate::repositories::auth_repository::AuthRepositoryImpl;
 use actix_web::{web, HttpResponse};
+use chrono::Utc;
+use log::{error, warn};
 
 pub async fn register_handler(
     service: web::Data<AuthService<AuthRepositoryImpl>>,
@@ -21,10 +23,23 @@ pub async fn login_handler(
     service: web::Data<AuthService<AuthRepositoryImpl>>,
     req: web::Json<LoginRequestDto>,
 ) -> Result<HttpResponse, AppError> {
-    match service.login_user(&req.username, &req.password).await {
+    warn!("{} login_handler called", Utc::now().format("%H:%M:%S:%3f"));
+
+    let res = match service.login_user(&req.username, &req.password).await {
         Ok(response) => Ok(HttpResponse::Ok().json(response)),
-        Err(err) => Err(err),
-    }
+        Err(err) => {
+            error!(
+                "Login failed: {}, username: {}, password: {}",
+                err, &req.username, &req.password
+            );
+            Err(err)
+        }
+    };
+    warn!(
+        "{} login_handler finished",
+        Utc::now().format("%H:%M:%S:%3f")
+    );
+    res
 }
 
 pub async fn logout_handler(

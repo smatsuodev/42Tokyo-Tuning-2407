@@ -30,6 +30,11 @@ pub trait AuthRepository {
     async fn delete_session(&self, session_token: &str) -> Result<(), AppError>;
     async fn find_session_by_session_token(&self, session_token: &str)
         -> Result<Session, AppError>;
+    async fn get_user_with_extra(
+        &self,
+        username: &str,
+        password: &str,
+    ) -> Result<Option<LoginResponseDto>, AppError>;
 }
 
 #[derive(Debug)]
@@ -108,41 +113,18 @@ impl<T: AuthRepository + std::fmt::Debug> AuthService<T> {
         username: &str,
         password: &str,
     ) -> Result<LoginResponseDto, AppError> {
-        match self.repository.find_user_by_username(username).await? {
-            Some(user) => {
-                let is_password_valid = verify_password(&user.password, password).unwrap();
-                if !is_password_valid {
-                    return Err(AppError::Unauthorized);
-                }
-
-                let session_token = generate_session_token();
+        match self
+            .repository
+            .get_user_with_extra(username, password)
+            .await?
+        {
+            Some(mut res) => {
+                res.session_token = generate_session_token();
                 self.repository
-                    .create_session(user.id, &session_token)
+                    .create_session(res.user_id, &res.session_token)
                     .await?;
 
-                match user.role.as_str() {
-                    "dispatcher" => {
-                        match self.repository.find_dispatcher_by_user_id(user.id).await? {
-                            Some(dispatcher) => Ok(LoginResponseDto {
-                                user_id: user.id,
-                                username: user.username,
-                                session_token,
-                                role: user.role.clone(),
-                                dispatcher_id: Some(dispatcher.id),
-                                area_id: Some(dispatcher.area_id),
-                            }),
-                            None => Err(AppError::InternalServerError),
-                        }
-                    }
-                    _ => Ok(LoginResponseDto {
-                        user_id: user.id,
-                        username: user.username,
-                        session_token,
-                        role: user.role.clone(),
-                        dispatcher_id: None,
-                        area_id: None,
-                    }),
-                }
+                Ok(res)
             }
             None => Err(AppError::Unauthorized),
         }

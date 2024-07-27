@@ -1,19 +1,23 @@
-use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
+use crate::domains::dto::auth::LoginResponseDto;
 use crate::errors::AppError;
 use crate::models::user::{Dispatcher, User};
+use crate::utils::verify_password;
 use crate::{domains::auth_service::AuthRepository, models::user::Session};
+use chrono::Utc;
+use log::warn;
+use rustc_hash::FxHashMap;
 use sqlx::mysql::MySqlPool;
 
 #[derive(Debug)]
 pub struct AuthRepositoryImpl {
     pool: MySqlPool,
-    sessions: Arc<RwLock<HashMap<String, i32>>>,
+    sessions: Arc<RwLock<FxHashMap<String, i32>>>,
 }
 
 impl AuthRepositoryImpl {
-    pub fn new(pool: MySqlPool, sessions: Arc<RwLock<HashMap<String, i32>>>) -> Self {
+    pub fn new(pool: MySqlPool, sessions: Arc<RwLock<FxHashMap<String, i32>>>) -> Self {
         AuthRepositoryImpl { pool, sessions }
     }
 }
@@ -141,5 +145,79 @@ impl AuthRepository for AuthRepositoryImpl {
             .await?;
 
         Ok(())
+    }
+
+    async fn get_user_with_extra(
+        &self,
+        username: &str,
+        password: &str,
+    ) -> Result<Option<LoginResponseDto>, AppError> {
+        warn!(
+            "{}: login: select query started",
+            Utc::now().format("%H:%M:%S:%3f")
+        );
+        let user = sqlx::query!(
+            r#"
+            SELECT
+                u.id,
+                u.username,
+                u.password,
+                u.role,
+                d.id AS dispatcher_id,
+                d.area_id
+            FROM
+                users AS u
+            LEFT JOIN
+                dispatchers AS d
+            ON
+                u.id = d.user_id
+            WHERE
+                u.username = ?
+            "#,
+            username
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+        warn!(
+            "{}: login: select query finished",
+            Utc::now().format("%H:%M:%S:%3f")
+        );
+
+        if let Some(user) = user {
+            warn!(
+                "{}: login: verify password started",
+                Utc::now().format("%H:%M:%S:%3f")
+            );
+            let is_password_valid = verify_password(&user.password, password).unwrap();
+            if !is_password_valid {
+                return Err(AppError::Unauthorized);
+            }
+            warn!(
+                "{}: login: verify password finished",
+                Utc::now().format("%H:%M:%S:%3f")
+            );
+
+            if user.role == "dispatcher" {
+                Ok(Some(LoginResponseDto {
+                    user_id: user.id,
+                    username: user.username,
+                    role: user.role,
+                    session_token: "".to_string(),
+                    dispatcher_id: Some(user.dispatcher_id.unwrap()),
+                    area_id: Some(user.area_id.unwrap()),
+                }))
+            } else {
+                Ok(Some(LoginResponseDto {
+                    user_id: user.id,
+                    username: user.username,
+                    role: user.role,
+                    session_token: "".to_string(),
+                    dispatcher_id: None,
+                    area_id: None,
+                }))
+            }
+        } else {
+            Ok(None)
+        }
     }
 }
