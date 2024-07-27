@@ -1,3 +1,6 @@
+use chrono::Utc;
+use log::warn;
+
 use super::dto::tow_truck::{self, TowTruckDto};
 use super::map_service::MapRepository;
 use super::order_service::OrderRepository;
@@ -79,6 +82,7 @@ impl<
         &self,
         order_id: i32,
     ) -> Result<Option<TowTruckDto>, AppError> {
+        warn!("{}: get_nearest_available_tow_trucks: called", Utc::now());
         let order = self.order_repository.find_order_by_id(order_id).await?;
         let area_id = self
             .map_repository
@@ -102,6 +106,7 @@ impl<
 
         let mut min_distance = i32::MAX;
         let mut truck: Option<TowTruck> = None;
+        warn!("{}: get_nearest_available_tow_trucks: calc", Utc::now());
         for t in tow_trucks {
             let distance = calculate_distance(&graph, t.node_id, order.node_id);
             if distance < min_distance {
@@ -120,6 +125,7 @@ impl<
             None
         };
 
+        warn!("{}: get_nearest_available_tow_trucks: finished", Utc::now());
         Ok(res)
     }
 }
