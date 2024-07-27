@@ -20,6 +20,8 @@ futures-util = "0.3.30"
 log = "0.4.22"
 actix-files = "0.6.6"
 rustc-hash = "2.0.0"
+image = "0.25.2"
+fast_image_resize = { version = "4.2.1", features = ["image"] }
 
 [build-dependencies]
 syn = "1"

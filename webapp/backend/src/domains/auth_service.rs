@@ -1,7 +1,12 @@
+use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use actix_web::web::Bytes;
+use fast_image_resize::images::Image;
+use fast_image_resize::{IntoImageView, Resizer};
+use image::codecs::png::PngEncoder;
+use image::{ImageEncoder, ImageReader};
 use log::error;
 
 use crate::errors::AppError;
@@ -146,30 +151,26 @@ impl<T: AuthRepository + std::fmt::Debug> AuthService<T> {
             Err(_) => return Err(AppError::NotFound),
         };
 
-        let path: PathBuf =
-            Path::new(&format!("images/user_profile/{}", profile_image_name)).to_path_buf();
+        let path = &format!("images/user_profile/{}", profile_image_name);
+        let src_image = ImageReader::open(path).unwrap().decode().unwrap();
+        let dst_width = 1024;
+        let dst_height = 768;
+        let mut dst_image = Image::new(dst_width, dst_height, src_image.pixel_type().unwrap());
+        let mut resizer = Resizer::new();
+        resizer.resize(&src_image, &mut dst_image, None).unwrap();
 
-        let output = Command::new("magick")
-            .arg(&path)
-            .arg("-resize")
-            .arg("500x500")
-            .arg("png:-")
-            .output()
-            .map_err(|e| {
-                error!("画像リサイズのコマンド実行に失敗しました: {:?}", e);
-                AppError::InternalServerError
-            })?;
+        // Write destination image as PNG-file
+        let mut result_buf = BufWriter::new(Vec::new());
+        PngEncoder::new(&mut result_buf)
+            .write_image(
+                dst_image.buffer(),
+                dst_width,
+                dst_height,
+                src_image.color().into(),
+            )
+            .unwrap();
 
-        match output.status.success() {
-            true => Ok(Bytes::from(output.stdout)),
-            false => {
-                error!(
-                    "画像リサイズのコマンド実行に失敗しました: {:?}",
-                    String::from_utf8_lossy(&output.stderr)
-                );
-                Err(AppError::InternalServerError)
-            }
-        }
+        Ok(Bytes::from(result_buf.into_inner().unwrap()))
     }
 
     pub async fn validate_session(&self, session_token: &str) -> Result<bool, AppError> {

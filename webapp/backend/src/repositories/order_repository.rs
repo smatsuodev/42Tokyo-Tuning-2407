@@ -68,9 +68,9 @@ impl OrderRepository for OrderRepositoryImpl {
         );
 
         let where_clause = match (status.clone(), area) {
-            (Some(_), Some(_)) => "WHERE o.status = ? AND n.area_id = ?".to_string(),
-            (None, Some(_)) => "WHERE n.area_id = ?".to_string(),
-            (Some(_), None) => "WHERE o.status = ?".to_string(),
+            (Some(_), Some(_)) => "AND o.status = ? AND n.area_id = ?".to_string(),
+            (None, Some(_)) => "AND n.area_id = ?".to_string(),
+            (Some(_), None) => "AND o.status = ?".to_string(),
             _ => "".to_string(),
         };
 
