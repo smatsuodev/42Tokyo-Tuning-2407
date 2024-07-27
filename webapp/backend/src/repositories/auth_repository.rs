@@ -14,13 +14,22 @@ use sqlx::FromRow;
 #[derive(Debug)]
 pub struct AuthRepositoryImpl {
     pool: MySqlPool,
-    sessions: Arc<RwLock<FxHashMap<String, i32>>>,
 }
 
 impl AuthRepositoryImpl {
-    pub fn new(pool: MySqlPool, sessions: Arc<RwLock<FxHashMap<String, i32>>>) -> Self {
-        AuthRepositoryImpl { pool, sessions }
+    pub fn new(pool: MySqlPool) -> Self {
+        AuthRepositoryImpl { pool }
     }
+}
+
+#[derive(FromRow, Clone, Debug)]
+struct UserWithExtra {
+    id: i32,
+    username: String,
+    password: String,
+    role: String,
+    dispatcher_id: Option<i32>,
+    area_id: Option<i32>,
 }
 
 #[derive(FromRow, Clone, Debug)]
@@ -92,19 +101,20 @@ impl AuthRepository for AuthRepositoryImpl {
     }
 
     async fn create_session(&self, user_id: i32, session_token: &str) -> Result<(), AppError> {
-        self.sessions
-            .write()
-            .map_err(|_| AppError::InternalServerError)?
-            .insert(session_token.to_string(), user_id);
+        sqlx::query("INSERT INTO sessions (user_id, session_token) VALUES (?, ?)")
+            .bind(user_id)
+            .bind(session_token)
+            .execute(&self.pool)
+            .await?;
 
         Ok(())
     }
 
     async fn delete_session(&self, session_token: &str) -> Result<(), AppError> {
-        self.sessions
-            .write()
-            .map_err(|_| AppError::InternalServerError)?
-            .remove(session_token);
+        sqlx::query("DELETE FROM sessions WHERE session_token = ?")
+            .bind(session_token)
+            .execute(&self.pool)
+            .await?;
 
         Ok(())
     }
@@ -113,17 +123,13 @@ impl AuthRepository for AuthRepositoryImpl {
         &self,
         session_token: &str,
     ) -> Result<Session, AppError> {
-        self.sessions
-            .read()
-            .map_err(|_| AppError::InternalServerError)?
-            .get(session_token)
-            .map(|user_id| Session {
-                id: 0,
-                user_id: *user_id,
-                session_token: session_token.to_string(),
-                is_valid: true,
-            })
-            .ok_or(AppError::InternalServerError)
+        let session =
+            sqlx::query_as::<_, Session>("SELECT * FROM sessions WHERE session_token = ?")
+                .bind(session_token)
+                .fetch_one(&self.pool)
+                .await?;
+
+        Ok(session)
     }
 
     async fn find_dispatcher_by_id(&self, id: i32) -> Result<Option<Dispatcher>, AppError> {
