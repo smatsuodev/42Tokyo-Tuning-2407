@@ -9,6 +9,7 @@ use chrono::Utc;
 use log::warn;
 use rustc_hash::FxHashMap;
 use sqlx::mysql::MySqlPool;
+use sqlx::FromRow;
 
 #[derive(Debug)]
 pub struct AuthRepositoryImpl {
@@ -20,6 +21,16 @@ impl AuthRepositoryImpl {
     pub fn new(pool: MySqlPool, sessions: Arc<RwLock<FxHashMap<String, i32>>>) -> Self {
         AuthRepositoryImpl { pool, sessions }
     }
+}
+
+#[derive(FromRow, Clone, Debug)]
+struct UserWithExtra {
+    id: i32,
+    username: String,
+    password: String,
+    role: String,
+    dispatcher_id: Option<i32>,
+    area_id: Option<i32>,
 }
 
 impl AuthRepository for AuthRepositoryImpl {
@@ -156,7 +167,7 @@ impl AuthRepository for AuthRepositoryImpl {
             "{}: login: select query started",
             Utc::now().format("%H:%M:%S:%3f")
         );
-        let user = sqlx::query!(
+        let user = sqlx::query_as::<_, UserWithExtra>(
             r#"
             SELECT
                 u.id,
@@ -174,8 +185,8 @@ impl AuthRepository for AuthRepositoryImpl {
             WHERE
                 u.username = ?
             "#,
-            username
         )
+        .bind(&username)
         .fetch_optional(&self.pool)
         .await?;
         warn!(
