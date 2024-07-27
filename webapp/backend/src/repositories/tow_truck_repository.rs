@@ -1,6 +1,7 @@
 use crate::domains::tow_truck_service::TowTruckRepository;
 use crate::errors::AppError;
 use crate::models::tow_truck::TowTruck;
+use futures_util::FutureExt;
 use sqlx::mysql::MySqlPool;
 
 #[derive(Debug)]
@@ -24,19 +25,12 @@ impl TowTruckRepository for TowTruckRepositoryImpl {
     ) -> Result<Vec<TowTruck>, AppError> {
         let where_clause = match (status, area_id) {
             (Some(status), Some(area_id)) => format!(
-                "WHERE tt.status = '{}' AND tt.area_id = {} AND l.timestamp = (SELECT MAX(timestamp) FROM locations WHERE tow_truck_id = tt.id)",
+                "WHERE tt.status = '{}' AND tt.area_id = {}",
                 status, area_id
             ),
-            (None, Some(area_id)) => format!(
-                "WHERE tt.area_id = {} AND l.timestamp = (SELECT MAX(timestamp) FROM locations WHERE tow_truck_id = tt.id)",
-                area_id
-            ),
-            (Some(status), None) => format!(
-                "WHERE tt.status = '{}' AND l.timestamp = (SELECT MAX(timestamp) FROM locations WHERE tow_truck_id = tt.id)",
-                status
-            ),
-            (None, None) => "WHERE l.timestamp = (SELECT MAX(timestamp) FROM locations WHERE tow_truck_id = tt.id)"
-                .to_string(),
+            (None, Some(area_id)) => format!("WHERE tt.area_id = {}", area_id),
+            (Some(status), None) => format!("WHERE tt.status = '{}'", status),
+            (None, None) => "".to_string(),
         };
         let limit_clause = match page_size {
             -1 => "".to_string(),
@@ -61,10 +55,10 @@ impl TowTruckRepository for TowTruckRepositoryImpl {
                 users u
             ON
                 tt.driver_id = u.id
-            JOIN 
-                locations l
-            ON 
-                tt.id = l.tow_truck_id
+            JOIN
+                `latest_locations` AS `l`
+            ON
+                `tt`.`id` = `l`.`tow_truck_id`
             {}
             ORDER BY
                 tt.id ASC
@@ -86,6 +80,35 @@ impl TowTruckRepository for TowTruckRepositoryImpl {
             .bind(node_id)
             .execute(&self.pool)
             .await?;
+        sqlx::query(
+            "
+                INSERT INTO
+                    `latest_locations` (
+                        `tow_truck_id`,
+                        `node_id`,
+                        `timestamp`
+                    )
+                SELECT
+                    `tow_truck_id`,
+                    `node_id`,
+                    `timestamp`
+                FROM `locations`
+                WHERE (`tow_truck_id`, `node_id`, `timestamp`) IN (
+                        SELECT `tow_truck_id`, `node_id`, `timestamp`
+                        FROM `locations`
+                        WHERE `tow_truck_id` = ? AND `node_id` = ?
+                        ORDER BY `id` DESC
+                    )
+                ON DUPLICATE KEY UPDATE
+                    `tow_truck_id` = VALUES(`tow_truck_id`),
+                    `node_id` = VALUES(`node_id`),
+                    `timestamp` = VALUES(`timestamp`)
+                ",
+        )
+        .bind(tow_truck_id)
+        .bind(node_id)
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
@@ -110,13 +133,12 @@ impl TowTruckRepository for TowTruckRepositoryImpl {
             ON
                 tt.driver_id = u.id
             JOIN
-                locations l
+                latest_locations l
             ON
                 tt.id = l.tow_truck_id
             WHERE
                 tt.id = ?
-            AND
-                l.timestamp = (SELECT MAX(timestamp) FROM locations WHERE tow_truck_id = tt.id)",
+            ",
         )
         .bind(id)
         .fetch_optional(&self.pool)

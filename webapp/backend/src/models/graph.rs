@@ -1,5 +1,7 @@
 use sqlx::FromRow;
-use std::collections::HashMap;
+use std::cmp::Ordering;
+use std::cmp::Reverse;
+use std::collections::{BinaryHeap, HashMap};
 
 #[derive(FromRow, Clone, Debug)]
 pub struct Node {
@@ -52,25 +54,33 @@ impl Graph {
 
     pub fn shortest_path(&self, from_node_id: i32, to_node_id: i32) -> i32 {
         let mut distances = HashMap::new();
-        distances.insert(from_node_id, 0);
+        let mut heap = BinaryHeap::new();
 
-        for _ in 0..self.nodes.len() {
-            for node_id in self.nodes.keys() {
-                if let Some(edges) = self.edges.get(node_id) {
-                    for edge in edges {
-                        let new_distance = distances
-                            .get(node_id)
-                            .and_then(|d: &i32| d.checked_add(edge.weight))
-                            .unwrap_or(i32::MAX);
-                        let current_distance = distances.get(&edge.node_b_id).unwrap_or(&i32::MAX);
-                        if new_distance < *current_distance {
-                            distances.insert(edge.node_b_id, new_distance);
-                        }
+        distances.insert(from_node_id, 0);
+        heap.push(Reverse((0, from_node_id)));
+
+        while let Some(Reverse((cost, node_id))) = heap.pop() {
+            if node_id == to_node_id {
+                return cost;
+            }
+
+            if cost > *distances.get(&node_id).unwrap_or(&i32::MAX) {
+                continue;
+            }
+
+            if let Some(edges) = self.edges.get(&node_id) {
+                for edge in edges {
+                    let next = edge.node_b_id;
+                    let next_cost = cost + edge.weight;
+
+                    if next_cost < *distances.get(&next).unwrap_or(&i32::MAX) {
+                        distances.insert(next, next_cost);
+                        heap.push(Reverse((next_cost, next)));
                     }
                 }
             }
         }
 
-        distances.get(&to_node_id).cloned().unwrap_or(i32::MAX)
+        i32::MAX
     }
 }

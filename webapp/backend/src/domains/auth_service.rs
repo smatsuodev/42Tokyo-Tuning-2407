@@ -3,11 +3,12 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use actix_web::web::Bytes;
+use chrono::Utc;
 use fast_image_resize::images::Image;
 use fast_image_resize::{IntoImageView, Resizer};
 use image::codecs::png::PngEncoder;
 use image::{ImageEncoder, ImageReader};
-use log::error;
+use log::{error, warn};
 
 use crate::errors::AppError;
 use crate::models::user::{Dispatcher, Session, User};
@@ -151,13 +152,37 @@ impl<T: AuthRepository + std::fmt::Debug> AuthService<T> {
             Err(_) => return Err(AppError::NotFound),
         };
 
+        warn!(
+            "{}: resize: started: {}, {}",
+            Utc::now().format("%H:%M:%S:%3f"),
+            profile_image_name,
+            user_id
+        );
         let path = &format!("images/user_profile/{}", profile_image_name);
         let src_image = ImageReader::open(path).unwrap().decode().unwrap();
+        warn!(
+            "{}: resize: file opened: {}, {}",
+            Utc::now().format("%H:%M:%S:%3f"),
+            profile_image_name,
+            user_id
+        );
         let dst_width = 500;
         let dst_height = 500;
         let mut dst_image = Image::new(dst_width, dst_height, src_image.pixel_type().unwrap());
+        warn!(
+            "{}: resize: dst created: {}, {}",
+            Utc::now().format("%H:%M:%S:%3f"),
+            profile_image_name,
+            user_id
+        );
         let mut resizer = Resizer::new();
         resizer.resize(&src_image, &mut dst_image, None).unwrap();
+        warn!(
+            "{}: resize: resized: {}, {}",
+            Utc::now().format("%H:%M:%S:%3f"),
+            profile_image_name,
+            user_id
+        );
 
         // Write destination image as PNG-file
         let mut result_buf = BufWriter::new(Vec::new());
@@ -169,8 +194,21 @@ impl<T: AuthRepository + std::fmt::Debug> AuthService<T> {
                 src_image.color().into(),
             )
             .unwrap();
+        warn!(
+            "{}: resize: buf finished: {}, {}",
+            Utc::now().format("%H:%M:%S:%3f"),
+            profile_image_name,
+            user_id
+        );
+        let res = Bytes::from(result_buf.into_inner().unwrap());
+        warn!(
+            "{}: resize: finished: {}, {}",
+            Utc::now().format("%H:%M:%S:%3f"),
+            profile_image_name,
+            user_id
+        );
 
-        Ok(Bytes::from(result_buf.into_inner().unwrap()))
+        Ok(res)
     }
 
     pub async fn validate_session(&self, session_token: &str) -> Result<bool, AppError> {
