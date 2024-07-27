@@ -153,8 +153,8 @@ impl<T: AuthRepository + std::fmt::Debug> AuthService<T> {
 
         let path = &format!("images/user_profile/{}", profile_image_name);
         let src_image = ImageReader::open(path).unwrap().decode().unwrap();
-        let dst_width = 1024;
-        let dst_height = 768;
+        let dst_width = 500;
+        let dst_height = 500;
         let mut dst_image = Image::new(dst_width, dst_height, src_image.pixel_type().unwrap());
         let mut resizer = Resizer::new();
         resizer.resize(&src_image, &mut dst_image, None).unwrap();
