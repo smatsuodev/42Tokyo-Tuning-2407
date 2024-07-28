@@ -70,30 +70,30 @@ services:
       start_period: 30s
     entrypoint: ["sh", "-c", "yarn start"]
 
-  # frontend-2:
-  #   container_name: frontend-2
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #     target: production
-  #   environment:
-  #     - API_BASE_URL=https://${HOSTNAME}.ftt2407.dabaas.net
-  #   ports:
-  #     - "3001:3000"
-  #   networks:
-  #     - webapp-network
-  #   depends_on:
-  #     backend-1:
-  #       condition: service_healthy
-  #     backend-2:
-  #       condition: service_healthy
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-I", "http://localhost:3000/health-check", "-X", "GET"]
-  #     interval: 5s
-  #     timeout: 10s
-  #     retries: 10
-  #     start_period: 30s
-  #   entrypoint: ["sh", "-c", "yarn start"]
+  frontend-2:
+    container_name: frontend-2
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    environment:
+      - API_BASE_URL=https://${HOSTNAME}.ftt2407.dabaas.net
+    ports:
+      - "3001:3000"
+    networks:
+      - webapp-network
+    depends_on:
+      backend-1:
+        condition: service_healthy
+      backend-2:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-I", "http://localhost:3000/health-check", "-X", "GET"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    entrypoint: ["sh", "-c", "yarn start"]
 
   db:
     container_name: mysql
@@ -135,8 +135,8 @@ services:
     depends_on:
       frontend-1:
         condition: service_healthy
-      # frontend-2:
-      #   condition: service_healthy
+      frontend-2:
+        condition: service_healthy
       backend-1:
         condition: service_healthy
       backend-2:
