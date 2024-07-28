@@ -159,11 +159,9 @@ impl OrderRepository for OrderRepositoryImpl {
         tow_truck_id: i32,
     ) -> Result<(), AppError> {
         sqlx::query(
-            "UPDATE orders SET dispatcher_id = ?, tow_truck_id = ?, status = 'dispatched' WHERE id = ?",
+            &format!("UPDATE orders SET dispatcher_id = {}, tow_truck_id = {}, status = 'dispatched' WHERE id = {}",
+                dispatcher_id, tow_truck_id, id),
         )
-        .bind(dispatcher_id)
-        .bind(tow_truck_id)
-        .bind(id)
         .execute(&self.pool)
         .await?;
 
@@ -176,10 +174,7 @@ impl OrderRepository for OrderRepositoryImpl {
         tow_truck_id: i32,
         completed_time: DateTime<Utc>,
     ) -> Result<(), AppError> {
-        sqlx::query("INSERT INTO completed_orders (order_id, tow_truck_id, completed_time) VALUES (?, ?, ?)")
-            .bind(order_id)
-            .bind(tow_truck_id)
-            .bind(completed_time)
+        sqlx::query(&format!("INSERT INTO completed_orders (order_id, tow_truck_id, completed_time) VALUES ({}, {}, {}))", order_id, tow_truck_id, completed_time))
             .execute(&self.pool)
             .await?;
 
