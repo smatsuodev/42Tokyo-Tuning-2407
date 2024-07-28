@@ -1,5 +1,6 @@
 use core::panic;
 use std::{
+    borrow::Borrow,
     collections::HashMap,
     sync::{Arc, RwLock},
 };
@@ -8,7 +9,7 @@ use sqlx::MySqlPool;
 
 use crate::{
     domains::map_service::MapRepository,
-    models::graph::{Edge, Node},
+    models::graph::{Edge, Graph, Node},
 };
 
 #[derive(Debug)]
@@ -18,6 +19,8 @@ pub struct MapRepositoryImpl {
     edges_by_area_cache: Arc<RwLock<Vec<HashMap<(i32, i32), Edge>>>>,
     nodes_cache: Vec<Node>,
     nodes_by_area_cache: Vec<Vec<Node>>,
+    graphs_by_area_cache: Arc<RwLock<Vec<Graph>>>,
+    graph_cache: Arc<RwLock<Graph>>,
 }
 
 impl MapRepositoryImpl {
@@ -27,6 +30,8 @@ impl MapRepositoryImpl {
         edges_by_area_cache: Arc<RwLock<Vec<HashMap<(i32, i32), Edge>>>>,
         nodes_cache: Vec<Node>,
         nodes_by_area_cache: Vec<Vec<Node>>,
+        graphs_cache: Arc<RwLock<Vec<Graph>>>,
+        graph_cache: Arc<RwLock<Graph>>,
     ) -> Self {
         MapRepositoryImpl {
             pool,
@@ -34,11 +39,25 @@ impl MapRepositoryImpl {
             edges_by_area_cache,
             nodes_cache,
             nodes_by_area_cache,
+            graphs_by_area_cache: graphs_cache,
+            graph_cache,
         }
     }
 }
 
 impl MapRepository for MapRepositoryImpl {
+    fn shortest_path(&self, from_node_id: i32, to_node_id: i32, area_id: Option<i32>) -> i32 {
+        match area_id {
+            Some(area_id) => self.graphs_by_area_cache.read().unwrap()[area_id as usize - 1]
+                .shortest_path(from_node_id, to_node_id),
+            None => self
+                .graph_cache
+                .read()
+                .unwrap()
+                .shortest_path(from_node_id, to_node_id),
+        }
+    }
+
     async fn get_all_nodes(&self, area_id: Option<i32>) -> Result<Vec<Node>, sqlx::Error> {
         let nodes = match area_id {
             Some(area_id) => self.nodes_by_area_cache[area_id as usize - 1].clone(),
@@ -105,6 +124,19 @@ impl MapRepository for MapRepositoryImpl {
                         weight,
                     },
                 );
+            });
+
+        self.graph_cache
+            .write()
+            .unwrap()
+            .update_weight(node_a_id, node_b_id, weight);
+
+        self.graphs_by_area_cache
+            .write()
+            .unwrap()
+            .iter_mut()
+            .for_each(|graph| {
+                graph.update_weight(node_a_id, node_b_id, weight);
             });
 
         Ok(())

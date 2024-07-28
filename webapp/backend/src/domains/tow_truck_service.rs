@@ -97,16 +97,16 @@ impl<
             .get_paginated_tow_trucks(0, -1, Some("available".to_string()), Some(area_id))
             .await?;
 
-        let nodes = self.map_repository.get_all_nodes(Some(area_id)).await?;
-        let edges = self.map_repository.get_all_edges(Some(area_id)).await?;
+        // let nodes = self.map_repository.get_all_nodes(Some(area_id)).await?;
+        // let edges = self.map_repository.get_all_edges(Some(area_id)).await?;
 
-        let mut graph = Graph::new();
-        for node in nodes {
-            graph.add_node(node);
-        }
-        for edge in edges {
-            graph.add_edge(edge);
-        }
+        // let mut graph = Graph::new();
+        // for node in nodes {
+        //     graph.add_node(node);
+        // }
+        // for edge in edges {
+        //     graph.add_edge(edge);
+        // }
 
         let mut min_distance = i32::MAX;
         let mut truck: Option<TowTruck> = None;
@@ -116,7 +116,7 @@ impl<
             order_id
         );
         for t in tow_trucks {
-            let distance = calculate_distance(&graph, t.node_id, order.node_id);
+            let distance = self.calculate_distance(t.node_id, order.node_id, Some(area_id));
             if distance < min_distance {
                 min_distance = distance;
                 truck = Some(t);
@@ -140,8 +140,9 @@ impl<
         );
         Ok(res)
     }
-}
 
-fn calculate_distance(graph: &Graph, node_id_1: i32, node_id_2: i32) -> i32 {
-    graph.shortest_path(node_id_1, node_id_2)
+    fn calculate_distance(&self, from_node_id: i32, to_node_id: i32, area: Option<i32>) -> i32 {
+        self.map_repository
+            .shortest_path(from_node_id, to_node_id, area)
+    }
 }

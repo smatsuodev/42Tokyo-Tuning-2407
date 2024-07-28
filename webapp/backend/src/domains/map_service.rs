@@ -13,6 +13,7 @@ pub trait MapRepository {
         node_b_id: i32,
         weight: i32,
     ) -> Result<(), sqlx::Error>;
+    fn shortest_path(&self, from_node_id: i32, to_node_id: i32, area_id: Option<i32>) -> i32;
 }
 
 #[derive(Debug)]

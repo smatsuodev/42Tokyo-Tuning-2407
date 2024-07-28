@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 use actix_cors::Cors;
@@ -11,7 +12,7 @@ use domains::{
     auth_service::AuthService, order_service::OrderService, tow_truck_service::TowTruckService,
 };
 use middlewares::auth_middleware::AuthMiddleware;
-use models::graph::{Edge, Node};
+use models::graph::{Edge, Graph, Node};
 use repositories::auth_repository::AuthRepositoryImpl;
 use repositories::map_repository::MapRepositoryImpl;
 use repositories::order_repository::OrderRepositoryImpl;
@@ -36,7 +37,7 @@ async fn main() -> std::io::Result<()> {
         port = 18080;
     }
 
-    let edges_cache = sqlx::query_as::<_, Edge>(
+    let edges_cache: HashMap<(i32, i32), Edge> = sqlx::query_as::<_, Edge>(
         "SELECT
             e.node_a_id,
             e.node_b_id,
@@ -55,7 +56,7 @@ async fn main() -> std::io::Result<()> {
         .fetch_one(&pool)
         .await
         .unwrap();
-    let mut edges_by_area_cache = Vec::new();
+    let mut edges_by_area_cache: Vec<HashMap<(i32, i32), Edge>> = Vec::new();
     for area in 1..=num_of_areas {
         let edges = sqlx::query_as::<_, Edge>(
             "SELECT
@@ -93,7 +94,7 @@ async fn main() -> std::io::Result<()> {
     .into_iter()
     .collect();
 
-    let mut nodes_by_area_cache = Vec::new();
+    let mut nodes_by_area_cache: Vec<Vec<Node>> = Vec::new();
     for area in 1..=num_of_areas {
         let nodes = sqlx::query_as::<_, Node>(
             "SELECT
@@ -113,6 +114,28 @@ async fn main() -> std::io::Result<()> {
         nodes_by_area_cache.push(nodes);
     }
 
+    let mut graph_cache = Graph::new();
+    for node in nodes_cache.clone() {
+        graph_cache.add_node(node);
+    }
+    for edge in edges_cache.values() {
+        graph_cache.add_edge(edge.clone());
+    }
+
+    let mut graphs_by_area_cache = Vec::new();
+    for area in 1..=num_of_areas {
+        let nodes = nodes_by_area_cache[area as usize - 1].clone();
+        let edges = edges_by_area_cache[area as usize - 1].clone();
+        let mut graph = Graph::new();
+        for node in nodes {
+            graph.add_node(node);
+        }
+        for edge in edges.values() {
+            graph.add_edge(edge.clone());
+        }
+        graphs_by_area_cache.push(graph);
+    }
+
     // 初期化時にDBからセッションを同期
     let sessions =
         sqlx::query_as::<_, (String, i32)>("SELECT session_token, user_id FROM sessions")
@@ -125,6 +148,8 @@ async fn main() -> std::io::Result<()> {
     let sessions = Arc::new(RwLock::new(sessions));
     let edges_cache = Arc::new(RwLock::new(edges_cache));
     let edges_by_area_cache = Arc::new(RwLock::new(edges_by_area_cache));
+    let graph_cache = Arc::new(RwLock::new(graph_cache));
+    let graphs_cache = Arc::new(RwLock::new(graphs_by_area_cache));
 
     let auth_service = web::Data::new(AuthService::new(AuthRepositoryImpl::new(
         pool.clone(),
@@ -143,6 +168,8 @@ async fn main() -> std::io::Result<()> {
             edges_by_area_cache.clone(),
             nodes_cache.clone(),
             nodes_by_area_cache.clone(),
+            graphs_cache.clone(),
+            graph_cache.clone(),
         ),
     ));
     let order_service = web::Data::new(OrderService::new(
@@ -155,6 +182,8 @@ async fn main() -> std::io::Result<()> {
             edges_by_area_cache.clone(),
             nodes_cache.clone(),
             nodes_by_area_cache.clone(),
+            graphs_cache.clone(),
+            graph_cache.clone(),
         ),
     ));
     let map_service = web::Data::new(MapService::new(MapRepositoryImpl::new(
@@ -163,6 +192,8 @@ async fn main() -> std::io::Result<()> {
         edges_by_area_cache.clone(),
         nodes_cache.clone(),
         nodes_by_area_cache.clone(),
+        graphs_cache.clone(),
+        graph_cache.clone(),
     )));
 
     HttpServer::new(move || {

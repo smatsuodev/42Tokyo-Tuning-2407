@@ -54,6 +54,24 @@ impl Graph {
             .push(reverse_edge);
     }
 
+    pub fn update_weight(&mut self, node_a_id: i32, node_b_id: i32, weight: i32) {
+        if let Some(edges) = self.edges.get_mut(&node_a_id) {
+            for edge in edges {
+                if edge.node_b_id == node_b_id {
+                    edge.weight = weight;
+                }
+            }
+        }
+
+        if let Some(edges) = self.edges.get_mut(&node_b_id) {
+            for edge in edges {
+                if edge.node_b_id == node_a_id {
+                    edge.weight = weight;
+                }
+            }
+        }
+    }
+
     pub fn shortest_path(&self, from_node_id: i32, to_node_id: i32) -> i32 {
         let mut distances = Vec::new();
         let mut heap = BinaryHeap::new();
