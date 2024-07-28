@@ -113,12 +113,11 @@ impl TowTruckRepository for TowTruckRepositoryImpl {
     }
 
     async fn update_status(&self, tow_truck_id: i32, status: &str) -> Result<(), AppError> {
-        sqlx::query(&format!(
-            "UPDATE tow_trucks SET status = {} WHERE id = {}",
-            status, tow_truck_id
-        ))
-        .execute(&self.pool)
-        .await?;
+        sqlx::query("UPDATE tow_trucks SET status = ? WHERE id = ?")
+            .bind(status)
+            .bind(tow_truck_id)
+            .execute(&self.pool)
+            .await?;
 
         Ok(())
     }
